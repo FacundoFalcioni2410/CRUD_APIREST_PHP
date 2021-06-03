@@ -32,107 +32,141 @@
 
         public static function AgregarSoloADMIN(Request $request, RequestHandler $handler): ResponseMW
         {
-            $response = $handler->handle($request);
-
-            if($response->getStatusCode() == 200)
+            if($request->getMethod() === 'POST')
             {
-                $ok = (string) $response->getBody();
+                $response = $handler->handle($request);
 
-                $mensajeJSON = new StdClass();
-                $mensajeJSON->exito = false;
-                $mensajeJSON->mensaje = 'No se pudo agregar el usuario';
-    
-                if($ok == true)
+                if($response->getStatusCode() == 200)
                 {
-                    $parametros = $request->getParsedBody();
-    
-                    $usuario = new Usuario();
-    
-                    $usuario->nombre = $parametros["nombre"];
-                    $usuario->apellido = $parametros["apellido"];
-                    $usuario->correo = $parametros["correo"];
-                    $usuario->clave = $parametros["clave"];
-                    $usuario->id_perfil = $parametros["id_perfil"];
-                    $archivos = $request->getUploadedFiles();
-                    $destino = "../fotos/";
-    
-                    $nombreAnterior = $archivos['foto']->getClientFilename();
-                    $extension = explode(".", $nombreAnterior);
-                    $extension = array_reverse($extension);
-                    
-                    $nombreFinal = $destino .  $usuario->nombre . "." . $extension[0];
-                    $archivos['foto']->moveTo($destino .  $usuario->nombre . "." . $extension[0]);
-                    $usuario->foto = $nombreFinal;
-    
-                    if($usuario->id_perfil == 1)
+                    $ok = (string) $response->getBody();
+
+                    $mensajeJSON = new StdClass();
+                    $mensajeJSON->exito = false;
+                    $mensajeJSON->mensaje = 'No se pudo agregar el usuario';
+        
+                    if($ok == true)
                     {
-                        if($usuario->AgregarUno())
+                        $parametros = $request->getParsedBody();
+        
+                        $usuario = new Usuario();
+        
+                        $usuario->nombre = $parametros["nombre"];
+                        $usuario->apellido = $parametros["apellido"];
+                        $usuario->correo = $parametros["correo"];
+                        $usuario->clave = $parametros["clave"];
+                        $usuario->id_perfil = $parametros["id_perfil"];
+                        $archivos = $request->getUploadedFiles();
+                        $destino = "../fotos/";
+        
+                        $nombreAnterior = $archivos['foto']->getClientFilename();
+                        $extension = explode(".", $nombreAnterior);
+                        $extension = array_reverse($extension);
+                        
+                        $nombreFinal = $destino .  $usuario->nombre . "." . $extension[0];
+                        $archivos['foto']->moveTo($destino .  $usuario->nombre . "." . $extension[0]);
+                        $usuario->foto = $nombreFinal;
+        
+                        if($usuario->id_perfil == 1)
                         {
-                            $mensajeJSON->exito = true;
-                            $mensajeJSON->mensaje = 'Usuario agregado con exito';
+                            if($usuario->AgregarUno())
+                            {
+                                $mensajeJSON->exito = true;
+                                $mensajeJSON->mensaje = 'Usuario agregado con exito';
+                            }
+                            else
+                            {
+                                unlink($usuario->foto);
+                            }
                         }
+                        
                     }
-                    else
-                    {
-                        unlink($usuario->foto);
-                    }
-                }
+                    
+                    $responseMW = new ResponseMW();
                 
-                $responseMW = new ResponseMW();
-            
-                $responseMW->getBody()->write(json_encode($mensajeJSON));
-            
-                return $responseMW->withHeader('Content-Type', 'application/json');
+                    $responseMW->getBody()->write(json_encode($mensajeJSON));
+                
+                    return $responseMW->withHeader('Content-Type', 'application/json');
+                }
+                else
+                {
+                    $responseMW = new ResponseMW();
+                    $responseMW->getBody()->write((string) $response->getBody());
+                    return $responseMW->withStatus(403);
+                }
             }
             else
             {
+                $response = $handler->handle($request);
                 $responseMW = new ResponseMW();
                 $responseMW->getBody()->write((string) $response->getBody());
-                return $responseMW->withStatus(403);
+                return $responseMW;
             }
         }
 
         public static function EliminarSoloSUPER_ADMIN(Request $request, RequestHandler $handler): ResponseMW
         {
             $response = $handler->handle($request);
+            $responseMW = new ResponseMW();
 
-            if($response->getStatusCode() == 200)
+            if($request->getMethod() === 'DELETE')
             {
-                $id = (string) $response->getBody();
 
-                $mensajeJSON = new StdClass();
-                $mensajeJSON->exito = false;
-                $mensajeJSON->mensaje = 'No se pudo eliminar a el usuario';
-    
-                if($id != null)
-                {    
-                    $usuario = Usuario::TraerUnoID($id);
-    
-                    if($usuario->id_perfil == 5)
-                    {
-                        if($usuario->EliminarUno())
+                if($response->getStatusCode() == 200)
+                {
+                    $id = (string) $response->getBody();
+
+                    $mensajeJSON = new StdClass();
+                    $mensajeJSON->exito = false;
+                    $mensajeJSON->mensaje = 'No se pudo eliminar a el usuario';
+        
+                    if($id != null)
+                    {    
+                        $usuario = Usuario::TraerUnoID($id);
+        
+                        if($usuario->id_perfil == 5)
                         {
-                            $mensajeJSON->exito = true;
-                            $mensajeJSON->mensaje = 'Usuario eliminado con exito';
-                            if($_COOKIE['idUsuario'] == $usuario->id)
+                            if($usuario->EliminarUno())
                             {
-                                setcookie('idUsuario','',1);
+                                $mensajeJSON->exito = true;
+                                $mensajeJSON->mensaje = 'Usuario eliminado con exito';
+                                if($_COOKIE['idUsuario'] == $usuario->id)
+                                {
+                                    setcookie('idUsuario','',1);
+                                }
                             }
                         }
                     }
+        
+                    $responseMW->getBody()->write(json_encode($mensajeJSON));
+                    return $responseMW->withHeader('Content-Type', 'application/json');
                 }
-    
-                $responseMW = new ResponseMW();
-                $responseMW->getBody()->write(json_encode($mensajeJSON));
-                return $responseMW->withHeader('Content-Type', 'application/json');
+                else
+                {
+                    $responseMW->getBody()->write((string) $response->getBody());
+                    return $responseMW->withStatus(403);
+                }
             }
             else
             {
-                $responseMW = new ResponseMW();
                 $responseMW->getBody()->write((string) $response->getBody());
-                return $responseMW->withStatus(403);
+                return $responseMW;
             }
         }
-    }
 
+        public function TiempoRespuesta(Request $request, RequestHandler $handler)
+        {
+            $horarioAntesLlamada = new DateTime('now');
+
+            $response = $handler->handle($request);
+
+            $horarioDespuesLlamada = new DateTime('now');
+
+            $intervalo = $horarioAntesLlamada->diff($horarioDespuesLlamada);
+
+
+            $responseMW = new ResponseMW();
+            $responseMW->getBody()->write($response->getBody() . '<br>' . $intervalo->format('%s segundos, %f milisegundos'));
+            return $responseMW->withStatus(200);
+        }
+    }
 ?>

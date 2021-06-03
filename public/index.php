@@ -13,12 +13,14 @@
 
     $app->group('/usuario', function (RouteCollectorProxy $grupo)
     {   
-        $grupo->get('/', Usuario::class . ':TraerTodos');
-        $grupo->get('/{json}', Usuario::class . ':VerificarBD')->add(\MiddleWare::class . "::ComprobarExistencia");
-        $grupo->post('/', Usuario::class . ':AgregarUsuario')->add(\MiddleWare::class . "::AgregarSoloADMIN");
-        $grupo->put('/{usuario_json}', Usuario::class . ':ModificarUsuario');
-        $grupo->delete('/{id}', Usuario::class . ':EliminarUsuario')->add(\MiddleWare::class . "::EliminarSoloSUPER_ADMIN");
-    });
+        $grupo->get('/', Usuario::class . ':TraerTodos')->add(\MiddleWare::class . ":TiempoRespuesta");
+        $grupo->get('/{json}', Usuario::class . ':VerificarBD')->add(\MiddleWare::class . "::ComprobarExistencia")
+                                                                ->add(\MiddleWare::class . ":TiempoRespuesta");
+        $grupo->post('/', Usuario::class . ':AgregarUsuario');
+        $grupo->put('/{usuario_json}', Usuario::class . ':ModificarUsuario')->add(\MiddleWare::class . ":TiempoRespuesta");
+        $grupo->delete('/{id}', Usuario::class . ':EliminarUsuario');
+    })->add(\MiddleWare::class . "::AgregarSoloADMIN")
+      ->add(\MiddleWare::class . "::EliminarSoloSUPER_ADMIN");
 
     $app->run();
 ?>
